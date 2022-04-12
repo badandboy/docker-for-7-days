@@ -2,25 +2,34 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"os/exec"
 	"syscall"
 )
 
-func main()  {
+const (
+	cgroupMemoryHierarchyMount = "/sys/fs/cgroup/memory"
+)
+
+func main() {
 	fmt.Println("start")
-	cmd := exec.Command("sh")
-	cmd.SysProcAttr = &syscall.SysProcAttr{
-		Cloneflags: syscall.CLONE_NEWUTS,
+	if os.Args[0] == "/proc/self/exe" {
+		fmt.Printf("current pid:%d\n", syscall.Getpid())
+
+		cmd := exec.Command("sh", "-c", "stress --vm-bytes 200m --vm-keep -m 1")
+		cmd.SysProcAttr = &syscall.SysProcAttr{}
+		cmd.Stdin = os.Stdin
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+
+		if err := cmd.Run(); err != nil {
+			panic(err)
+		}
 	}
 
-	cmd.Stdin = os.Stdin
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-
-	if err := cmd.Run(); err != nil {
-		log.Fatal(err)
+	cmd := exec.Command("/proc/self/exe")
+	cmd.SysProcAttr = &syscall.SysProcAttr{
+		Cloneflags: syscall.CLONE_NEWUTS | syscall.CLONE_NEWPID | syscall.CLONE_NEWNS,
 	}
 
 }
